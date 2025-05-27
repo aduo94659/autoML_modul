@@ -62,19 +62,18 @@ if st.session_state['df'] is not None:
             st.session_state['predictor'] = predictor
             save_predictor(predictor)
             st.success("Модель навчена і збережена!")
+    if predictor is not None:
+        leaderboard_df = predictor.leaderboard(silent=True)
+        available_columns = leaderboard_df.columns.tolist()
+        display_columns = [col for col in ['model', 'score_val', 'fit_time', 'predict_time'] if col in available_columns]
 
-   if predictor is not None:
-    leaderboard_df = predictor.leaderboard(silent=True)
-    available_columns = leaderboard_df.columns.tolist()
-    display_columns = [col for col in ['model', 'score_val', 'fit_time', 'predict_time'] if col in available_columns]
+        st.markdown("### 📊 Таблиця моделей (Leaderboard):")
+        st.dataframe(leaderboard_df[display_columns])
 
-    st.markdown("### 📊 Таблиця моделей (Leaderboard):")
-    st.dataframe(leaderboard_df[display_columns])
-
-    best_model_name = predictor.get_model_best()
-    st.markdown(f"### Найкраща модель: `{best_model_name}`")
+        best_model_name = predictor.get_model_best()
+        st.markdown(f"### Найкраща модель: `{best_model_name}`")
 else:
-    st.info("Спочатку навчіть або завантажте модель.")
+        st.info("Спочатку навчіть або завантажте модель.")
 
 
 # --- Завантаження збереженої моделі ---
