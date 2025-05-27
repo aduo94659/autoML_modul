@@ -71,6 +71,9 @@ if st.session_state['df'] is not None:
         st.markdown("### 📊 Таблиця моделей (Leaderboard):")
         st.dataframe(leaderboard_df[display_columns])
 
+best_model_name = predictor.get_model_best()
+st.markdown(f"### Найкраща модель: `{best_model_name}`")
+
 # --- Завантаження збереженої моделі ---
 if st.button("Завантажити збережену модель"):
     predictor = load_predictor('AutogluonModels/')
