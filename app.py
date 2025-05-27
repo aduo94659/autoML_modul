@@ -62,10 +62,16 @@ if uploaded_file is not None:
             save_predictor(predictor)
             st.success("Модель навчена і збережена!")
 
-            # --- Leaderboard моделей ---
-            leaderboard_df = predictor.leaderboard(silent=True)
-            st.markdown("### 📊 Таблиця моделей (Leaderboard):")
-            st.dataframe(leaderboard_df[['model', 'score_val', 'fit_time', 'predict_time']])
+            # Отримуємо leaderboard
+leaderboard_df = predictor.leaderboard(silent=True)
+
+# Динамічно перевіряємо, які з колонок наявні
+available_columns = leaderboard_df.columns.tolist()
+display_columns = [col for col in ['model', 'score_val', 'fit_time', 'predict_time'] if col in available_columns]
+
+st.markdown("### 📊 Таблиця моделей (Leaderboard):")
+st.dataframe(leaderboard_df[display_columns])
+
 
 # --- Спроба завантажити наявну модель ---
 if st.button("Завантажити збережену модель"):
