@@ -62,12 +62,22 @@ if uploaded_file is not None:
             save_predictor(predictor)
             st.success("Модель навчена і збережена!")
 
+            # --- Leaderboard моделей ---
+            leaderboard_df = predictor.leaderboard(silent=True)
+            st.markdown("### 📊 Таблиця моделей (Leaderboard):")
+            st.dataframe(leaderboard_df[['model', 'score_val', 'fit_time', 'predict_time']])
+
 # --- Спроба завантажити наявну модель ---
 if st.button("Завантажити збережену модель"):
     predictor = load_predictor('AutogluonModels/')
     if predictor:
         st.session_state['predictor'] = predictor
         st.success("Модель успішно завантажена!")
+
+        # --- Leaderboard моделей ---
+        leaderboard_df = predictor.leaderboard(silent=True)
+        st.markdown("### 📊 Таблиця моделей (Leaderboard):")
+        st.dataframe(leaderboard_df[['model', 'score_val', 'fit_time', 'predict_time']])
     else:
         st.error("Не вдалося завантажити модель. Перевірте наявність каталогу AutogluonModels.")
 
@@ -76,7 +86,7 @@ if st.session_state['predictor'] is not None:
     predictor = st.session_state['predictor']
     df = st.session_state['df']
     target_column = st.session_state['target_column']
-    
+
     # --- Метрики ---
     test_data = df.drop(df.sample(frac=0.8, random_state=42).index)
     y_true = test_data[target_column]
@@ -85,7 +95,7 @@ if st.session_state['predictor'] is not None:
     st.markdown(f"## Метрики якості моделі")
     st.write(f"**Accuracy:** {acc:.3f}")
 
-    if set(y_true.unique()) == {0,1}:
+    if set(y_true.unique()) == {0, 1}:
         y_proba = predictor.predict_proba(test_data)[1]
         fpr, tpr, _ = roc_curve(y_true, y_proba)
         roc_auc = auc(fpr, tpr)
@@ -93,7 +103,7 @@ if st.session_state['predictor'] is not None:
 
         fig_roc, ax_roc = plt.subplots()
         ax_roc.plot(fpr, tpr, label=f'ROC крива (AUC = {roc_auc:.3f})')
-        ax_roc.plot([0,1], [0,1], linestyle='--', color='grey')
+        ax_roc.plot([0, 1], [0, 1], linestyle='--', color='grey')
         ax_roc.set_xlabel('FPR')
         ax_roc.set_ylabel('TPR')
         ax_roc.legend()
@@ -143,9 +153,8 @@ st.sidebar.write("""
 1. Завантажте CSV-файл (UTF-8)
 2. Оберіть колонку цільової змінної
 3. Навчіть модель або завантажте збережену
-4. Перегляньте метрики якості
+4. Перегляньте метрики якості та таблицю моделей
 5. Введіть дані для прогнозу
 6. Отримайте результат
 """)
 st.sidebar.markdown("---")
-
