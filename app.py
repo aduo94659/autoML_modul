@@ -21,7 +21,7 @@ def load_predictor(path='AutogluonModels/'):
             return None
     return None
 
-# --- Стан ---
+# --- Ініціалізація сесії ---
 if 'predictor' not in st.session_state:
     st.session_state['predictor'] = None
 if 'df' not in st.session_state:
@@ -40,6 +40,7 @@ if uploaded_file is not None:
         st.error(f"Помилка завантаження файлу: {e}")
         st.stop()
 
+if st.session_state['df'] is not None:
     df = st.session_state['df']
     st.success("Файл завантажено успішно!")
     st.write("Типи колонок:")
@@ -54,7 +55,7 @@ if uploaded_file is not None:
     train_data = df.sample(frac=0.8, random_state=42)
     test_data = df.drop(train_data.index)
 
-    # --- Кнопка навчання ---
+    # --- Навчання нової моделі ---
     if st.button('Навчити нову модель'):
         with st.spinner("Навчаємо модель..."):
             predictor = TabularPredictor(label=target_column, path='AutogluonModels/').fit(train_data)
@@ -62,25 +63,21 @@ if uploaded_file is not None:
             save_predictor(predictor)
             st.success("Модель навчена і збережена!")
 
-            # Отримуємо leaderboard
-leaderboard_df = predictor.leaderboard(silent=True)
+        # Вивід leaderboard після навчання
+        leaderboard_df = predictor.leaderboard(silent=True)
+        available_columns = leaderboard_df.columns.tolist()
+        display_columns = [col for col in ['model', 'score_val', 'fit_time', 'predict_time'] if col in available_columns]
 
-# Динамічно перевіряємо, які з колонок наявні
-available_columns = leaderboard_df.columns.tolist()
-display_columns = [col for col in ['model', 'score_val', 'fit_time', 'predict_time'] if col in available_columns]
+        st.markdown("### 📊 Таблиця моделей (Leaderboard):")
+        st.dataframe(leaderboard_df[display_columns])
 
-st.markdown("### 📊 Таблиця моделей (Leaderboard):")
-st.dataframe(leaderboard_df[display_columns])
-
-
-# --- Спроба завантажити наявну модель ---
+# --- Завантаження збереженої моделі ---
 if st.button("Завантажити збережену модель"):
     predictor = load_predictor('AutogluonModels/')
     if predictor:
         st.session_state['predictor'] = predictor
         st.success("Модель успішно завантажена!")
 
-        # --- Leaderboard моделей ---
         leaderboard_df = predictor.leaderboard(silent=True)
         st.markdown("### 📊 Таблиця моделей (Leaderboard):")
         st.dataframe(leaderboard_df[['model', 'score_val', 'fit_time', 'predict_time']])
@@ -88,21 +85,22 @@ if st.button("Завантажити збережену модель"):
         st.error("Не вдалося завантажити модель. Перевірте наявність каталогу AutogluonModels.")
 
 # --- Робота з навченою моделлю ---
-if st.session_state['predictor'] is not None:
+if st.session_state['predictor'] is not None and st.session_state['df'] is not None and st.session_state['target_column'] is not None:
     predictor = st.session_state['predictor']
     df = st.session_state['df']
     target_column = st.session_state['target_column']
 
-    # --- Метрики ---
     test_data = df.drop(df.sample(frac=0.8, random_state=42).index)
     y_true = test_data[target_column]
     y_pred = predictor.predict(test_data)
     acc = accuracy_score(y_true, y_pred)
+
     st.markdown(f"## Метрики якості моделі")
     st.write(f"**Accuracy:** {acc:.3f}")
 
+    # ROC-AUC лише для двокласової класифікації з класами 0 і 1
     if set(y_true.unique()) == {0, 1}:
-        y_proba = predictor.predict_proba(test_data)[1]
+        y_proba = predictor.predict_proba(test_data)[1]  # ймовірність класу 1
         fpr, tpr, _ = roc_curve(y_true, y_proba)
         roc_auc = auc(fpr, tpr)
         st.write(f"**ROC-AUC:** {roc_auc:.3f}")
@@ -117,6 +115,7 @@ if st.session_state['predictor'] is not None:
     else:
         st.info("Для ROC-AUC потрібні класи 0 і 1.")
 
+    # Матриця плутанини
     cm = confusion_matrix(y_true, y_pred)
     fig_cm, ax_cm = plt.subplots()
     disp = ConfusionMatrixDisplay(confusion_matrix=cm)
@@ -151,9 +150,14 @@ if st.session_state['predictor'] is not None:
         st.write(f"### Прогноз: `{pred}`")
 
 else:
-    st.info("Завантажте датасет, оберіть цільову змінну та навчіть або завантажте модель.")
+    if st.session_state['df'] is None:
+        st.info("Завантажте датасет.")
+    elif st.session_state['target_column'] is None:
+        st.info("Оберіть цільову змінну.")
+    elif st.session_state['predictor'] is None:
+        st.info("Навчіть модель або завантажте збережену.")
 
-# --- Інфо ---
+# --- Інструкція у сайдбарі ---
 st.sidebar.title("Інструкція")
 st.sidebar.write("""
 1. Завантажте CSV-файл (UTF-8)
