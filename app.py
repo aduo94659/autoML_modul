@@ -70,10 +70,12 @@ if st.session_state['df'] is not None:
         st.markdown("### 📊 Таблиця моделей (Leaderboard):")
         st.dataframe(leaderboard_df[display_columns])
 
-        best_model_name = predictor.get_model_best()
-        st.markdown(f"### Найкраща модель: `{best_model_name}`")
-else:
+    # Отримати найкращу модель
+        best_model_name = leaderboard_df.iloc[0]['model']
+        st.markdown(f"### ✅ Обрана найкраща модель: `{best_model_name}`")
+    else:
         st.info("Спочатку навчіть або завантажте модель.")
+
 
 
 # --- Завантаження збереженої моделі ---
